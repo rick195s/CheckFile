@@ -64,7 +64,7 @@ $(PROGRAM_OPT).c $(PROGRAM_OPT).h: $(PROGRAM_OPT).ggo
 	gengetopt < $(PROGRAM_OPT).ggo --file-name=$(PROGRAM_OPT)
 
 clean:
-	rm -f *.o core.* *~ $(PROGRAM) *.bak $(PROGRAM_OPT).h $(PROGRAM_OPT).c
+	rm -f *.o core.* *~ $(PROGRAM) *.bak $(PROGRAM_OPT).h $(PROGRAM_OPT).c out.txt
 
 docs: Doxyfile
 	doxygen Doxyfile

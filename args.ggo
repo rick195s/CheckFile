@@ -6,9 +6,8 @@ description "   Ricardo dos Santos Franco - 2202314
         PDF, GIF, JPG, PNG, MP4, ZIP, HTML"
 versiontext ""
 
-
 defgroup "main options" groupdesc="\n Choose one of this options \n" required
 
-groupoption "file" f "File(s) to be analyzed, -f path1 -f path2 ... " group="main options" string typestr="filename" multiple 
+groupoption "files" f "File(s) to be analyzed, -f path1 -f path2 ... " group="main options" string typestr="filename" multiple 
 groupoption "batch" b "File with the path(s) of the file(s) to be analyzed. One per line" group="main options" string typestr="filename" 
 groupoption "dir" d "Dir with the file(s) to be analyzed" group="main options" string typestr="dirname" 

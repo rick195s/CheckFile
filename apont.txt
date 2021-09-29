@@ -1,0 +1,2 @@
+permissoes de ficheiro 
+ficheiro existe

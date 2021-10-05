@@ -24,7 +24,7 @@ PROGRAM=prog
 PROGRAM_OPT=args
 
 # Object files required to build the executable
-PROGRAM_OBJS=main.o $(PROGRAM_OPT).o debug.o # memory.o 
+PROGRAM_OBJS=main.o $(PROGRAM_OPT).o debug.o memory.o 
 
 # Clean and all are not files
 .PHONY: clean all docs indent debugon

@@ -14,13 +14,12 @@
 #include <sys/wait.h>
 #include "args.h"
 #include "debug.h"
-
-//#include "memory.h"
+#include "memory.h"
 
 // Validate file permissions, existance, etc
 int fileValidation(char *filePath)
 {
-	FILE *file = fopen(filePath, "r"); 
+	FILE *file = fopen(filePath, "r");
 
 	if (file == NULL)
 		ERROR(2, "Can't open file\n\t'%s'", filePath);
@@ -45,55 +44,14 @@ int batchValidation(char *batchPath)
 	return 0;
 }
 
-
-char *getFileExtension(char* filePath){
-
-	return strrchr(filePath, '.')+1;
-
+char *getFileExtension(char *filePath)
+{
+	return strrchr(filePath, '.') + 1;
 }
 
-// Validate the file extension with the actual file type
-int mimeValidation(char *mimeType, char *fileExtension)
-{
-	char *types[2] = {"application/pdf", "image/png"};
-	char *extensions[2] = {"pdf", "png"};
+void extractFileType(FILE *outputFile, char *filePath){
 
-	for (size_t i = 0; i < 2; i++)
-		if ( !strcmp(extensions[i], fileExtension) && !strcmp(types[i],mimeType) )
-			return 0;		
-	
-	return -1;
-}
-
-char *mimeParsing(FILE *fd, char *mimeType)
-{
-	// saves the file size in bytes
-	size_t fileSize = lseek(fileno(fd), 0, SEEK_END);
-
-	lseek(fileno(fd), 0, SEEK_SET);
-
-	// sizeof(char) = 1
-	mimeType = realloc(mimeType,fileSize);
-
-	// gets the fist line
-	fgets(mimeType, fileSize, fd);
-	
-	// finds the last occurence of ':' and adds 2
-	// so mimeType wont have ': ' 
-	mimeType = strrchr(mimeType, ':')+2;
-
-	return mimeType;
-}
-
-int fileProcessing(char *filePath)
-{
-	fileValidation(filePath);
-
-	FILE *outputFile = fopen("out.txt", "w+");
-	
-	char *mimeType = NULL;
-	char *fileExtension = NULL;
-
+	// Creates child process
 	pid_t id = fork();
 
 	if (id == 0)
@@ -103,25 +61,100 @@ int fileProcessing(char *filePath)
 		execlp("file", "file", "--mime-type", filePath, NULL);
 	}
 	else
+		// Parent waits for Child
 		wait(NULL);
 
+}
+
+// Validate the file extension with the actual file type
+int mimeValidation(char *mimeType, char *fileExtension, char *detectedExtension)
+{
+	// define the supported mime types and extensions
+	char *types[3] = {"application/pdf", "image/png", "image/jpeg"};
+	char *extensions[3] = {"pdf", "png", "jpeg/jpg/jpe/jfif"};
+
+	strcpy(detectedExtension, "");
+
+	for (size_t i = 0; i < 3; i++)
+		// Check if mimeType is supported by checkFile
+		if (!strcmp(types[i], mimeType))
+		{
+			strcpy(detectedExtension, extensions[i]);
+			if (strstr(extensions[i], fileExtension) != NULL)
+				return 0;
+		}
+
+	// if detectedExtension is empty then the mime type isn't supported
+	if (!strcmp(detectedExtension, ""))
+		return 2;
 	
-	mimeType = mimeParsing(outputFile, mimeType);
+	return 1;
+}
+
+char *mimeParsing(char *mimeType, char *filePath)
+{
+	FILE *outputFile = fopen("out.txt", "w+");
+	
+	extractFileType(outputFile, filePath);
+
+	// saves the file size in bytes
+	size_t fileSize = lseek(fileno(outputFile), 0, SEEK_END);
+
+	lseek(fileno(outputFile), 0, SEEK_SET);
+
+	// sizeof(char) = 1
+	//mimeType = realloc(mimeType, fileSize);
+	mimeType = MALLOC(fileSize);
+	
+	if (mimeType == NULL)
+		ERROR(2, "Not hable to request memory");
+	
+	// gets the fist line
+	fgets(mimeType, fileSize, outputFile);
+
+	// finds the last occurence of ':' and adds 2
+	// so mimeType wont have ': '
+	mimeType = strrchr(mimeType, ':') + 2;
+
 	fclose(outputFile);
 
-	if(mimeType == NULL)
-		ERROR(2,"Not hable to request memory");
+	return mimeType;
+}
+
+int fileProcessing(char *filePath)
+{
+	fileValidation(filePath);
+
+	char *mimeType = NULL;
+	char *fileExtension = NULL;
+	char *detectedExtension = MALLOC(100);
+
+	mimeType = mimeParsing(mimeType, filePath);
 
 	fileExtension = getFileExtension(filePath);
-	
-	if(!mimeValidation(mimeType, fileExtension)){
-		printf("[OK] '%s': extension '%s' matches file type '%s'\n", filePath, fileExtension,	mimeType);
-		return 0;
+
+	// Show output information 
+	switch (mimeValidation(mimeType, fileExtension, detectedExtension))
+	{
+	case 0:
+		printf("[OK] '%s': extension '%s' matches file type '%s'\n", filePath, fileExtension, detectedExtension);
+		break;
+
+	case 1:
+		printf("[MISMATCH] '%s': extension is '%s', file type is '%s'\n", filePath, fileExtension, detectedExtension);
+		break;
+
+	case 2:
+		printf("[INFO] '%s': type '%s' is not supported by checkFile\n", filePath, mimeType);
+		break;
+
+	default:
+		break;
 	}
 	
-	printf("[MISMATCH] '%s': extension is '%s', file type is '%s'\n", filePath, fileExtension,	mimeType);
+	FREE(detectedExtension);
 
-	return -1;
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -136,8 +169,6 @@ int main(int argc, char *argv[])
 	if (args.files_given > 0)
 		for (size_t i = 0; i < args.files_given; i++)
 			fileProcessing(args.files_arg[i]);
-		
-
 
 	if (args.dir_given > 0)
 		dirValidation(args.dir_arg);

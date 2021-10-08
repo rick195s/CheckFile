@@ -18,7 +18,7 @@ LDFLAGS=#-pg
 IFLAGS=-linux -brs -brf -br
 
 # Name of the executable
-PROGRAM=prog
+PROGRAM=checkFile
 
 # Prefix for the gengetopt file (if gengetopt is used)
 PROGRAM_OPT=args
@@ -45,7 +45,7 @@ $(PROGRAM): $(PROGRAM_OBJS)
 	$(CC) -o $@ $(PROGRAM_OBJS) $(LIBS) $(LDFLAGS)
 
 # Dependencies
-main.o: main.c $(PROGRAM_OPT).h debug.h # memory.h 
+main.o: main.c $(PROGRAM_OPT).h debug.h memory.h 
 $(PROGRAM_OPT).o: $(PROGRAM_OPT).c $(PROGRAM_OPT).h
 
 debug.o: debug.c debug.h

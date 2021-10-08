@@ -12,36 +12,23 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
 #include "args.h"
 #include "debug.h"
 #include "memory.h"
 
 // Validate file permissions, existance, etc
-int fileValidation(char *filePath)
+FILE *openFile(char *filePath)
 {
 	FILE *file = fopen(filePath, "r");
 
+	// Using exit will stop the program and not verify the other files.
+	// So I decided just to show the warning message and then return NULL or the file
+
 	if (file == NULL)
-		ERROR(2, "Can't open file\n\t'%s'", filePath);
+		fprintf(stderr, "ERROR: cannot open file '%s' -- %s\n", filePath, strerror(errno));
 
-	fclose(file);
-
-	return 0;
-}
-
-// Validate dir permissions, existance, etc
-int dirValidation()
-{
-
-	return 0;
-}
-
-// Validate if file have file paths in it
-int batchValidation(char *batchPath)
-{
-	fileValidation(batchPath);
-
-	return 0;
+	return file;
 }
 
 char *getFileExtension(char *filePath)
@@ -49,8 +36,8 @@ char *getFileExtension(char *filePath)
 	return strrchr(filePath, '.') + 1;
 }
 
-void extractFileType(FILE *outputFile, char *filePath){
-
+void extractFileType(FILE *outputFile, char *filePath)
+{
 	// Creates child process
 	pid_t id = fork();
 
@@ -63,7 +50,6 @@ void extractFileType(FILE *outputFile, char *filePath){
 	else
 		// Parent waits for Child
 		wait(NULL);
-
 }
 
 // Validate the file extension with the actual file type
@@ -87,14 +73,14 @@ int mimeValidation(char *mimeType, char *fileExtension, char *detectedExtension)
 	// if detectedExtension is empty then the mime type isn't supported
 	if (!strcmp(detectedExtension, ""))
 		return 2;
-	
+
 	return 1;
 }
 
 char *mimeParsing(char *mimeType, char *filePath)
 {
 	FILE *outputFile = fopen("out.txt", "w+");
-	
+
 	extractFileType(outputFile, filePath);
 
 	// saves the file size in bytes
@@ -105,10 +91,10 @@ char *mimeParsing(char *mimeType, char *filePath)
 	// sizeof(char) = 1
 	//mimeType = realloc(mimeType, fileSize);
 	mimeType = MALLOC(fileSize);
-	
+
 	if (mimeType == NULL)
 		ERROR(2, "Not hable to request memory");
-	
+
 	// gets the fist line
 	fgets(mimeType, fileSize, outputFile);
 
@@ -123,7 +109,10 @@ char *mimeParsing(char *mimeType, char *filePath)
 
 int fileProcessing(char *filePath)
 {
-	fileValidation(filePath);
+	FILE *file = openFile(filePath);
+
+	if (file == NULL)
+		return 1;
 
 	char *mimeType = NULL;
 	char *fileExtension = NULL;
@@ -133,7 +122,7 @@ int fileProcessing(char *filePath)
 
 	fileExtension = getFileExtension(filePath);
 
-	// Show output information 
+	// Show output information
 	switch (mimeValidation(mimeType, fileExtension, detectedExtension))
 	{
 	case 0:
@@ -151,8 +140,45 @@ int fileProcessing(char *filePath)
 	default:
 		break;
 	}
-	
+
+	fclose(file);
 	FREE(detectedExtension);
+
+	return 0;
+}
+
+// Validate dir permissions, existance, etc
+int dirValidation(char *dirPath)
+{
+	
+	opendir(dirPath);
+
+	return 0;
+}
+
+// Validate if file have file paths in it
+int batchValidation(char *batchPath)
+{
+	FILE *file = openFile(batchPath);
+
+	if (file == NULL)
+		return 1;
+
+	char *fileToVal = MALLOC(100);
+
+	// "ler" até ao fim do ficheiro
+	while (!feof(file))
+	{
+		if (fgets(fileToVal, 100, file) != NULL)
+		{
+			// remove \n char from string
+			fileToVal = strtok(fileToVal, "\n");
+			fileProcessing(fileToVal);
+		}
+	}
+
+	fclose(file);
+	FREE(fileToVal);
 
 	return 0;
 }

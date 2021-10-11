@@ -17,6 +17,8 @@
 #include "debug.h"
 #include "memory.h"
 
+#define MAX_EXT_SIZE 30
+
 // Validate file permissions, existance, etc
 FILE *openFile(char *filePath)
 {
@@ -31,9 +33,14 @@ FILE *openFile(char *filePath)
 	return file;
 }
 
-char *getFileExtension(char *filePath)
+char *getFileExtension(char *fileExtension, char *filePath)
 {
-	return strrchr(filePath, '.') + 1;
+
+	fileExtension = MALLOC(MAX_EXT_SIZE);
+
+	strcpy(fileExtension, strrchr(filePath, '.') + 1);
+
+	return fileExtension;
 }
 
 void extractFileType(FILE *outputFile, char *filePath)
@@ -59,6 +66,8 @@ int mimeValidation(char *mimeType, char *fileExtension, char *detectedExtension)
 	char *types[3] = {"application/pdf", "image/png", "image/jpeg"};
 	char *extensions[3] = {"pdf", "png", "jpeg/jpg/jpe/jfif"};
 
+	detectedExtension = MALLOC(MAX_EXT_SIZE);
+
 	strcpy(detectedExtension, "");
 
 	for (size_t i = 0; i < 3; i++)
@@ -72,9 +81,9 @@ int mimeValidation(char *mimeType, char *fileExtension, char *detectedExtension)
 
 	// if detectedExtension is empty then the mime type isn't supported
 	if (!strcmp(detectedExtension, ""))
-		return 2;
+		return -2;
 
-	return 1;
+	return -1;
 }
 
 char *mimeParsing(char *mimeType, char *filePath)
@@ -100,7 +109,8 @@ char *mimeParsing(char *mimeType, char *filePath)
 
 	// finds the last occurence of ':' and adds 2
 	// so mimeType wont have ': '
-	mimeType = strrchr(mimeType, ':') + 2;
+
+	strcpy(mimeType, strrchr(mimeType, ':') + 2);
 
 	fclose(outputFile);
 
@@ -112,15 +122,15 @@ int fileProcessing(char *filePath)
 	FILE *file = openFile(filePath);
 
 	if (file == NULL)
-		return 1;
+		return -1;
 
 	char *mimeType = NULL;
 	char *fileExtension = NULL;
-	char *detectedExtension = MALLOC(100);
+	char *detectedExtension = NULL;
 
 	mimeType = mimeParsing(mimeType, filePath);
 
-	fileExtension = getFileExtension(filePath);
+	fileExtension = getFileExtension(fileExtension, filePath);
 
 	// Show output information
 	switch (mimeValidation(mimeType, fileExtension, detectedExtension))
@@ -129,11 +139,11 @@ int fileProcessing(char *filePath)
 		printf("[OK] '%s': extension '%s' matches file type '%s'\n", filePath, fileExtension, detectedExtension);
 		break;
 
-	case 1:
+	case -1:
 		printf("[MISMATCH] '%s': extension is '%s', file type is '%s'\n", filePath, fileExtension, detectedExtension);
 		break;
 
-	case 2:
+	case -2:
 		printf("[INFO] '%s': type '%s' is not supported by checkFile\n", filePath, mimeType);
 		break;
 
@@ -143,26 +153,80 @@ int fileProcessing(char *filePath)
 
 	fclose(file);
 	FREE(detectedExtension);
+	FREE(mimeType);
+	FREE(fileExtension);
 
 	return 0;
 }
 
 // Validate dir permissions, existance, etc
-int dirValidation(char *dirPath)
+int dirProcessing(char *dirPath)
 {
-	
-	opendir(dirPath);
+	DIR *dir = opendir(dirPath);
+	struct dirent *dir_entry;
+	int finito = 0;
+	char *fullPath = NULL;
 
+	// Check last char of dirPath
+	// Using values of ASCII table to avoid calling strcomp because
+	// I'm just comparing char
+	if (dirPath[strlen(dirPath) - 1] != (int)'/')
+	{
+		strcat(dirPath, "/");
+	}
+
+	if (dir == NULL)
+	{
+		fprintf(stderr, "ERROR: cannot open dir '%s' -- %s\n", dirPath, strerror(errno));
+		return -1;
+	}
+
+	while (finito == 0)
+	{
+		dir_entry = readdir(dir);
+		if (dir_entry == NULL)
+		{
+			if (errno)
+			{
+				closedir(dir);
+				return -1;
+			}
+			else
+				finito = 1;
+		}
+		else
+		{
+			fullPath = MALLOC(strlen(dirPath) + strlen(dir_entry->d_name));
+			if (fullPath == NULL)
+			{
+				fprintf(stderr, "ERROR: cannot allocate memory %s\n", strerror(errno));
+				return -1;
+			}
+
+			strcat(fullPath, dirPath);
+			strcat(fullPath, dir_entry->d_name);
+			fileProcessing(fullPath);
+		}
+	}
+
+	if (closedir(dir) == -1)
+	{
+		fprintf(stderr, "ERROR: cannot close dir '%s' -- %s\n",
+				dirPath, strerror(errno));
+		return -1;
+	}
+
+	FREE(fullPath);
 	return 0;
 }
 
 // Validate if file have file paths in it
-int batchValidation(char *batchPath)
+int batchProcessing(char *batchPath)
 {
 	FILE *file = openFile(batchPath);
 
 	if (file == NULL)
-		return 1;
+		return -1;
 
 	char *fileToVal = MALLOC(100);
 
@@ -197,10 +261,10 @@ int main(int argc, char *argv[])
 			fileProcessing(args.files_arg[i]);
 
 	if (args.dir_given > 0)
-		dirValidation(args.dir_arg);
+		dirProcessing(args.dir_arg);
 
 	if (args.batch_given > 0)
-		batchValidation(args.batch_arg);
+		batchProcessing(args.batch_arg);
 
 	// gengetopt: libertar recurso (assim que possível)
 	cmdline_parser_free(&args);

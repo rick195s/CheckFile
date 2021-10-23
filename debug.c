@@ -32,7 +32,8 @@
  * @return A função não retorna nada
  * @see DEBUG
  */
-void debug(const char *file, const int line, char *fmt, ...) {
+void debug(const char *file, const int line, char *fmt, ...)
+{
     va_list ap;
 
     va_start(ap, fmt);
@@ -58,7 +59,8 @@ void debug(const char *file, const int line, char *fmt, ...) {
  * @return A função não retorna nada
  * @see WARNING
  */
-void warning(const char *file, const int line, char *fmt, ...) {
+void warning(const char *file, const int line, char *fmt, ...)
+{
     va_list ap;
 
     va_start(ap, fmt);
@@ -85,7 +87,8 @@ void warning(const char *file, const int line, char *fmt, ...) {
  * @return A função não retorna nada
  * @see ERROR
  */
-void error(const char *file, const int line, int exitCode, char *fmt, ...) {
+void error(const char *file, const int line, int exitCode, char *fmt, ...)
+{
     va_list ap;
 
     va_start(ap, fmt);
@@ -97,9 +100,11 @@ void error(const char *file, const int line, int exitCode, char *fmt, ...) {
     exit(exitCode);
 }
 
-void show_bytes(char *ptr, size_t num_bytes) {
+void show_bytes(char *ptr, size_t num_bytes)
+{
     unsigned char *work_ptr = (unsigned char *)ptr;
-    for (size_t i = 0; i < num_bytes; i++) {
+    for (size_t i = 0; i < num_bytes; i++)
+    {
         printf("[%02zu] %hhx\n", i, *work_ptr);
         work_ptr++;
     }

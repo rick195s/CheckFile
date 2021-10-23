@@ -21,7 +21,6 @@
 #define MAX_EXT_SIZE 30
 #define MAX_FILENAME_SIZE 100
 #define EXT_NUMBER 7
-#define OUTPUT_FILENAME "out.txt"
 
 // Global variables changed by batchProcessing and being read by signalProcessing
 // when program receives SIGUSR1 signal
@@ -186,7 +185,7 @@ int mimeValidation(const char *mime_type, const char *file_extension, char *dete
  */
 char *mimeParsing(char *mime_type, const char *file_path)
 {
-	FILE *output_file = fopen(OUTPUT_FILENAME, "w+");
+	FILE *output_file = fopen("out.txt", "w+");
 
 	if (output_file == NULL)
 		return NULL;
@@ -215,10 +214,6 @@ char *mimeParsing(char *mime_type, const char *file_path)
 	// so mime_type wont have ': '
 	strcpy(mime_type, strrchr(mime_type, ':') + 2);
 	fclose(output_file);
-
-	// not verifying if file was successful removed because I don't want to notify
-	// the user about that
-	remove(OUTPUT_FILENAME);
 
 	return mime_type;
 }
@@ -294,7 +289,7 @@ int dirProcessing(char *dir_path, int *summary)
 {
 	DIR *dir = opendir(dir_path);
 	struct dirent *dir_entry;
-	int stop = 0;
+	int fim = 0;
 	char *full_path = NULL;
 
 	// Checking dir
@@ -326,19 +321,18 @@ int dirProcessing(char *dir_path, int *summary)
 	printf("[INFO] analyzing files of directory '%s'\n", dir_path);
 
 	// Read from dir
-	while (!stop)
+	while (fim == 0)
 	{
 		dir_entry = readdir(dir);
 		if (dir_entry == NULL)
 		{
 			if (errno)
 			{
-				fprintf(stderr, "[ERROR] cannot read from directory '%s' -- %s\n", dir_path, strerror(errno));
 				closedir(dir);
-				exit(2);
+				return -1;
 			}
 			else
-				stop = 1;
+				fim = 1;
 		}
 		else
 		{
@@ -347,7 +341,7 @@ int dirProcessing(char *dir_path, int *summary)
 			if (full_path == NULL)
 			{
 				fprintf(stderr, "[ERROR] cannot allocate memory\n");
-				exit(2);
+				return -1;
 			}
 
 			// Initializing 'full_path'
@@ -360,7 +354,12 @@ int dirProcessing(char *dir_path, int *summary)
 		}
 	}
 
-	closedir(dir);
+	if (closedir(dir) == -1)
+	{
+		fprintf(stderr, "[ERROR] cannot close dir '%s' -- %s\n",
+				dir_path, strerror(errno));
+		exit(2);
+	}
 
 	return 0;
 }
@@ -391,6 +390,8 @@ int batchProcessing(const char *batch_path, int *summary)
 		return -1;
 	}
 
+	// int number_of_files = 0;
+	// char **list_of_files = NULL;
 	time(&init_batch_time);
 	printf("[INFO] analyzing files listed in '%s'\n", batch_path);
 
@@ -416,9 +417,18 @@ int batchProcessing(const char *batch_path, int *summary)
 
 			file_number++;
 			fileProcessing(file_to_val, summary);
+			// listOfFiles = (char **)realloc(listOfFiles, (numberOfFiles + 1) * sizeof(char *));
+			//*(listOfFiles + numberOfFiles) = (char *)MALLOC(MAX_FILENAME_SIZE * sizeof(char));
+			// strcpy(*(listOfFiles + numberOfFiles), file_to_val);
+			// numberOfFiles++;
 		}
 	}
 
+	// Freeing used memory
+	// for (int i = 0; i < numberOfFiles; i++)
+	//	FREE(*(listOfFiles + i));
+
+	// FREE(listOfFiles);
 	fclose(file);
 	FREE(file_to_val);
 

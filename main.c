@@ -418,7 +418,6 @@ int batchProcessing(const char *batch_path, int *summary)
 			fileProcessing(file_to_val, summary);
 		}
 	}
-
 	fclose(file);
 	FREE(file_to_val);
 

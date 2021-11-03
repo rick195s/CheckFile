@@ -88,13 +88,22 @@ void showSummary(const int *summary)
  */
 int fileProcessing(const char *file_path, int *summary)
 {
-	// Checking file permissions
-	int as_perm = access(file_path, R_OK);
-	if (as_perm != 0)
+	// Checking file
+	FILE *fd = fopen(file_path, "r");
+	if (fd == NULL)
 	{
 		fprintf(stderr, "[ERROR] cannot open file '%s' -- %s\n", file_path, strerror(errno));
 		(*(summary + 2))++;
 
+		return -1;
+	}
+
+	fseek(fd, 0, SEEK_END);
+
+	if (!ftell(fd))
+	{
+		printf("[INFO] '%s': empty file cannot be classified\n", file_path);
+		fclose(fd);
 		return -1;
 	}
 
@@ -132,6 +141,7 @@ int fileProcessing(const char *file_path, int *summary)
 	}
 
 	// Freeing memory
+	fclose(fd);
 	FREE(detected_extension);
 	FREE(file_extension);
 	FREE(mime_type);
@@ -173,7 +183,7 @@ int dirProcessing(char *dir_path, int *summary)
 		{
 			closedir(dir);
 			fprintf(stderr, "[ERROR] not hable to allocate memory\n");
-			exit(2);
+			exit(3);
 		}
 
 		strcat(dir_path, "/");
@@ -191,7 +201,7 @@ int dirProcessing(char *dir_path, int *summary)
 			{
 				fprintf(stderr, "[ERROR] cannot read from directory '%s' -- %s\n", dir_path, strerror(errno));
 				closedir(dir);
-				exit(2);
+				exit(4);
 			}
 			else
 				stop = 1;
@@ -203,7 +213,8 @@ int dirProcessing(char *dir_path, int *summary)
 			if (full_path == NULL)
 			{
 				fprintf(stderr, "[ERROR] cannot allocate memory\n");
-				exit(2);
+				closedir(dir);
+				exit(5);
 			}
 
 			// Initializing 'full_path'
@@ -234,7 +245,7 @@ int batchProcessing(const char *batch_path, int *summary)
 	if (file == NULL)
 	{
 		fprintf(stderr, "[ERROR] cannot open file '%s' -- %s\n", batch_path, strerror(errno));
-		return -1;
+		exit(4);
 	}
 
 	char *file_to_val = MALLOC(MAX_FILENAME_SIZE);
@@ -243,7 +254,7 @@ int batchProcessing(const char *batch_path, int *summary)
 	if (file_to_val == NULL)
 	{
 		fclose(file);
-		return -1;
+		exit(5);
 	}
 
 	time(&init_batch_time);
@@ -256,6 +267,8 @@ int batchProcessing(const char *batch_path, int *summary)
 		if (file_error)
 		{
 			fprintf(stderr, "[ERROR] cannot read from file or dir '%s' -- %s\n", batch_path, strerror(file_error));
+			fclose(file);
+			FREE(file_to_val);
 			return -1;
 		}
 

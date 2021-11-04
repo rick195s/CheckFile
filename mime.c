@@ -96,13 +96,12 @@ int mimeValidation(const char *mime_type, const char *file_extension, char *dete
             strcpy(detected_extension, extensions[i]);
             if (strstr(detected_extension, file_extension) != NULL)
                 return 0;
+
+            return -1;
         }
 
-    // if detected_extension is empty string then the mime type extracted isn't supported
-    if (!strcmp(detected_extension, ""))
-        return -2;
-
-    return -1;
+    // mime type extracted isn't supported
+    return -2;
 }
 
 /**

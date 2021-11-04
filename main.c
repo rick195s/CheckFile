@@ -24,7 +24,7 @@ int file_number = 0;
 char *file_name = NULL;
 time_t init_batch_time;
 
-int fileProcessing(const char *file_path, int *summary);
+int fileProcessing(char *file_path, int *summary);
 int dirProcessing(char *dir_path, int *summary);
 int batchProcessing(const char *batch_path, int *summary);
 void showSummary(const int *summary);
@@ -86,7 +86,7 @@ void showSummary(const int *summary)
  * @return 	0 -> all ok;
  * 			-1 -> error detected
  */
-int fileProcessing(const char *file_path, int *summary)
+int fileProcessing(char *file_path, int *summary)
 {
 	// Checking file
 	FILE *fd = fopen(file_path, "r");
@@ -100,6 +100,7 @@ int fileProcessing(const char *file_path, int *summary)
 
 	fseek(fd, 0, SEEK_END);
 
+	// If file empty ftell will return 0
 	if (!ftell(fd))
 	{
 		printf("[INFO] '%s': empty file cannot be classified\n", file_path);
@@ -114,12 +115,25 @@ int fileProcessing(const char *file_path, int *summary)
 	mime_type = mimeParsing(mime_type, file_path);
 
 	if (mime_type == NULL)
+	{
+		printf("[INFO] '%s': not hable to detect mime type\n", file_path);
+		fclose(fd);
+		FREE(detected_extension);
+		FREE(file_extension);
 		return -1;
+	}
 
 	if (getFileExtension(file_extension, file_path))
+	{
+		printf("[INFO] '%s': file without extension\n", file_path);
+		fclose(fd);
+		FREE(detected_extension);
+		FREE(file_extension);
+		FREE(mime_type);
 		return -1;
+	}
 
-	// Show output information
+	// Showing output information
 	switch (mimeValidation(mime_type, file_extension, detected_extension))
 	{
 	case 0:
@@ -137,6 +151,7 @@ int fileProcessing(const char *file_path, int *summary)
 		break;
 
 	default:
+		printf("[INFO] '%s': type '%s' is not supported by checkFile\n", file_path, mime_type);
 		break;
 	}
 

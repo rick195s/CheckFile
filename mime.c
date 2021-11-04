@@ -21,12 +21,18 @@
  * @return	0 -> extension was detected;
  * 			-1 -> extension not detected
  */
-int getFileExtension(char *file_extension, const char *file_path)
+int getFileExtension(char *file_extension, char *file_path)
 {
     char *ptr;
 
+    // returns ptr if found '/' or NULL if not
+    ptr = strrchr(file_path, (int)'/');
+
+    if (ptr == NULL)
+        ptr = file_path;
+
     // returns ptr if found '.' or NULL if not
-    if ((ptr = strrchr(file_path, (int)'.')) == NULL)
+    if ((ptr = strrchr(ptr, (int)'.')) == NULL)
         return -1;
 
     // I want what's after the '.' character so +1

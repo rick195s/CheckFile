@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
 	int summary[3] = {0};
 
 	if (cmdline_parser(argc, argv, &args))
-		ERROR(1, "Error cmdline_parser\n");
+		ERROR(1, "Error: cmdline_parser\n");
 
 	// What function will process signals
 	act_info.sa_sigaction = signalProcessing;
